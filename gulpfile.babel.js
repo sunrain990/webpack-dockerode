@@ -29,6 +29,7 @@ gulp.task('default', cb => {
 
     new WebpackDevServer(webpack(myConfig), {
         noInfo: false,
+        disableHostCheck: true,
         hot: true,
         inline: true,
         historyApiFallback: true,
