@@ -1,0 +1,401 @@
+<template>
+    <div>
+        <el-row class="login">
+            <el-col :span="6" :offset="9">
+                <div class="grid-content">
+                    <el-input placeholder="用户名" v-model="uid">
+                        <div slot="prepend" class="fa fa-user icon"></div>
+                    </el-input>
+                </div>
+                <div class="grid-content">
+                    <el-input type="password" placeholder="密码" v-model="pwd">
+                        <div slot="prepend" class="fa fa-lock icon"></div>
+                    </el-input>
+                </div>
+                <div class="msg">{{msg}}</div>
+                <el-button style="width: 100%;" type="info" @click="login()">登&nbsp&nbsp&nbsp&nbsp&nbsp录</el-button>
+            </el-col>
+        </el-row>
+
+
+        <el-dialog title="系统信息" v-model="dialogTableVisible">
+            <div class="row tb">
+                <div class="col-xs-2">系统</div>
+                <div class="col-xs-2">登录ID</div>
+                <div class="col-xs-2">姓名</div>
+                <div class="col-xs-3">输入密码</div>
+                <div class="col-xs-3">确认同步</div>
+            </div>
+            <div class="row tbb" v-for="(k,v) in mergedUsers">
+                <div class="col-xs-2">{{v}}</div>
+                <div class="col-xs-2">{{k.uid}}</div>
+                <div class="col-xs-2">{{k.name}}</div>
+                <div class="col-xs-3">
+                    <input v-show="k.uid&&!k.checked" v-model="k.password" type="text" style="border: none;border: 1px solid #ccc;width: 60%">
+                </div>
+                <div class="col-xs-3" v-show="k.uid">
+                    <div class="col-xs-6">
+                        <i class="fa" :class="k.checked?'fa-check':'fa-close'" :style="!k.checked?'color:red':'color:green'"></i>
+                    </div>
+                    <button v-show="!k.checked" class="col-xs-6 btn btn-primary btn-xs" @click="userSync(k.uid,k.password,v)">确认</button>
+                </div>
+                <div class="col-xs-3" v-show="!k.uid">
+                    <span style="color: red">没有账户</span>
+                </div>
+            </div>
+            <div class="row tbbb" v-show="allsync">
+                <div class="col-xs-9" style="color: red;">所有系统账号密码同步成功,统一生成登录账号</div>
+                <div class="col-xs-3">
+                    <button class="btn btn-warning btn-xs" @click="syncAllAccount()">确定</button>
+                </div>
+            </div>
+        </el-dialog>
+
+
+        <el-dialog :title="syncSysTitle" v-model="syncAccount" size="large">
+
+            <div class="row sync-info">
+                <div class="col-xs-6">
+                    <div class="col-xs-3 tips">
+                        登录工号:
+                    </div>
+                    <div class="col-xs-9">
+                        <el-input v-model="facadeUser.uid" :disabled="true"></el-input>
+                    </div>
+                </div>
+                <div class="col-xs-6">
+                    <div class="col-xs-3 tips">
+                        密码:
+                    </div>
+                    <div class="col-xs-9">
+                        <el-input v-model="facadeUser.password" placeholder="请输入密码"></el-input>
+                    </div>
+                    <div class="col-xs-12" style="margin-top: 2px;color: #ccc">
+                        (初始密码默认:123456)
+                    </div>
+                </div>
+            </div>
+
+            <div class="row sync-info">
+                <div class="col-xs-6">
+                    <div class="col-xs-3 tips">
+                        邮箱:
+                    </div>
+                    <div class="col-xs-9">
+                        <el-input v-model="facadeUser.email" placeholder="请输入邮箱"></el-input>
+                    </div>
+                </div>
+                <div class="col-xs-6">
+                    <div class="col-xs-3 tips">
+                        姓名:
+                    </div>
+                    <div class="col-xs-9">
+                        <el-input v-model="facadeUser.name" placeholder="请输入姓名"></el-input>
+                    </div>
+                </div>
+            </div>
+
+            <div class="row sync-info">
+                <div class="col-xs-6">
+                    <div class="col-xs-3 tips">
+                        电话:
+                    </div>
+                    <div class="col-xs-9">
+                        <el-input v-model="facadeUser.tel" placeholder="请输入电话号码"></el-input>
+                    </div>
+                </div>
+                <div class="col-xs-6">
+                    <div class="col-xs-3 tips">
+                        性别:
+                    </div>
+                    <div class="col-xs-9">
+
+                        <el-radio-group v-model="facadeUser.sex" style="height: 34px;line-height: 34px;">
+                            <el-radio :label="0">男</el-radio>
+                            <el-radio :label="1">女</el-radio>
+                        </el-radio-group>
+
+                    </div>
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-xs-9"></div>
+                <div class="col-xs-3">
+                    <button class="btn btn-primary" @click="unitInfo(facadeUser)">确认统一账号信息</button>
+                </div>
+            </div>
+        </el-dialog>
+    </div>
+</template>
+
+<style lang="less">
+    .login {
+        margin: 100px 0;
+    }
+    .grid-content {
+        margin: 20px 0;
+    }
+    .icon {
+        width: 20px;
+        text-align: center;
+    }
+    .msg {
+        font-size: 12px;
+        color: red;
+        text-align: center;
+        margin: 10px auto;
+    }
+    .tb {
+        background: #EEF1F6;
+        height: 40px;
+        line-height: 40px;
+        font-size: 14px;
+        font-weight: 500;
+        text-align: center;
+        border: 1px solid #DFE6EC;
+        margin: 0;
+    }
+    .tbb {
+        min-height: 60px;
+        font-size: 14px;
+        line-height: normal;
+        font-weight: 200;
+        border: 1px solid #DFE6EC;
+        border-top: none;
+        text-align: center;
+        word-break:break-all;
+        padding-top: 20px;
+        margin: 0;
+    }
+    .tbbb {
+        min-height: 40px;
+        font-size: 14px;
+        line-height: 40px;
+        font-weight: 200;
+        border: 1px solid #DFE6EC;
+        border-top: none;
+        text-align: center;
+        word-break:break-all;
+        margin: 0;
+    }
+    .tips {
+        font-size: 16px;
+        padding: 6px 20px;
+    }
+    .sync-info {
+        margin-bottom: 20px;
+    }
+</style>
+
+<script>
+    import {API_ROOT} from '../config'
+    import _ from 'lodash'
+
+    export default {
+        name: 'app',
+        components: {
+        },
+        ready() {
+            console.log('hoho');
+        },
+        created() {
+            console.log('created!')
+//            this.$http.get('/hello');
+        },
+        data() {
+            return {
+                uid: '',
+                pwd: '',
+                msg: '',
+                mergedUsers: {},
+                dialogTableVisible: false,
+                syncAccount: false,
+                allsync: false,
+                facadeUser: '',
+                syncSysTitle: ''
+            }
+        },
+        sockets: {
+            connect: function() {
+                console.log('login socket connected!',this.$socket.id)
+            },
+            message: function(dt) {
+                this.message(dt);
+            },
+            notify: function(dt) {
+                this.notify(dt);
+            }
+        },
+        methods: {
+            login() {
+                const that = this;
+//                that.resetValue();
+                var instance = this.$http.create(
+                        {
+                            headers: {
+                                'jwt-access-token': '131452c',
+                                'socket-id': that.$socket.id
+                            }
+                        }
+                );
+                instance.post(API_ROOT + '/manage/login',
+                        {
+                            uid: that.uid,
+                            pwd: that.pwd
+                        }).then(function(dt) {
+                    console.log(dt, 'this is dt');
+                    // 后台返回登录错误信息
+                    if(dt.data.status.code == -1) {
+                        // 具体错误
+                        // 登录失败,用户没有找到并且原来系统没有
+                        if(dt.data.data.status == 0) {
+                            that.msg = '用户不存在'
+                        }else if(dt.data.data.status == 1) {
+                            that.msg = '用户存在原系统中,请求同步...'
+                            that.mergedUsers = dt.data.data.merged;
+                            that.confirmSync({
+                                uid: that.uid,
+                                pwd: that.pwd
+                            });
+                        }else if(dt.data.data.status == 5) {
+                            that.message({
+                                message: '登录失败, 用户名存在, 用户密码错误...',
+                                type: 'error'
+                            });
+                        }
+                    }else {
+                        if(dt.data.data.status == 6) {
+                            that.message({
+                                message: '登录成功!',
+                                type: 'success'
+                            });
+                        }
+                    }
+                })
+            },
+            confirmSync(dt) {
+                var that = this;
+                this.$http.post(API_ROOT + '/manage/usersync',dt)
+                    .then(function(dt) {
+                        if(dt.data.data.status == 2) {
+                            that.msg = '同步成功,进入账号设置页面...'
+                            that.dialogTableVisible = true
+                        }else if(dt.data.data.status == 3) {
+                            that.msg = '部分系统同步成功,存在账号与密码不匹配情况...'
+                            that.dialogTableVisible = true
+                        }else if(dt.data.data.status == 4) {
+                            that.msg = '怎么记的密码,都不对呢!'
+                            that.dialogTableVisible = true
+                        }else if(dt.data.data.status == 5) {
+                            that.msg = '同步了一个系统密码...'
+                            that.dialogTableVisible = true
+                            for(var i in dt.data.data) {
+                                if(i != 'status') {
+                                    console.log(i, dt.data.data[i],' this is i');
+                                    if(dt.data.data[i]) {
+                                        that.message({
+                                            message: '同步'+ i+ '系统成功',
+                                            type: 'success'
+                                        });
+                                    }else {
+                                        that.message({
+                                            message: '同步'+ i+ '系统失败',
+                                            type: 'error'
+                                        });
+                                    }
+                                }
+                            }
+                        }
+                        console.log('booling',dt);
+                        var boolSync = true;
+
+                        _.forEach(dt.data.data, function(v,k) {
+                            if(that.mergedUsers[k]) {
+                                that.mergedUsers[k].checked = v;
+                            }
+                        })
+
+                        _.forEach(that.mergedUsers,function(v, k) {
+                            if(that.mergedUsers[k].uid) {
+                                boolSync = boolSync && that.mergedUsers[k].checked;
+                            }
+                        });
+
+                        that.allsync = boolSync;
+
+                        console.log(that.mergedUsers , 'merged')
+                    });
+            },
+            userSync(uid, pwd, sys) {
+                this.confirmSync({
+                    uid: uid,
+                    pwd: pwd,
+                    sys: sys
+                })
+            },
+            syncAllAccount() {
+                console.log('开始同步所有账号!');
+                var that = this;
+                that.dialogTableVisible = false
+                that.syncAccount = true
+                console.log(that.mergedUsers, 'this mergedUsers is ....')
+
+                var obj = that.mergedUsers;
+                var objN = Object.keys(obj)[0];
+                that.facadeUser = obj[objN];
+                that.syncSysTitle = "统一账号,默认以" + objN + "系统账户信息为模版"
+                console.log(that.facadeUser);
+
+            },
+            unitInfo(facadeUser) {
+                const that = this;
+                var instance = this.$http.create(
+                        {
+                            headers: {
+                                'jwt-access-token': '131452c',
+                                'socket-id': that.$socket.id
+                            }
+                        }
+                );
+                instance.post(API_ROOT + '/manage/unitinfo',
+                        {
+                            user: facadeUser
+                        }).then(function(dt) {
+                    // 后台返回登录错误信息
+                    if(dt.data.status.code == 0) {
+                        that.message({
+                            message: '同步用户成功, 正在登入用户管理系统...',
+                            type: 'success'
+                        })
+                        that.facadeUser = dt.data.data;
+                        console.log(dt.data.data)
+                    }else {
+
+                    }
+                }).catch(function(dt) {
+                    console.log(dt)
+                })
+            },
+            message(dt) {
+                dt['type'] = dt['type']?dt['type']:'info';
+                dt.showClose = true;
+                this.$message(dt)
+            },
+            notify(dt) {
+                this.$notify(dt);
+            },
+            resetValue() {
+//                this.uid = ''
+//                this.pwd = ''
+                this.msg = ''
+//                this.mergedUsers = ''
+//                this.dialogTableVisible = false
+//                this.syncAccount = false
+                this.allsync = false
+//                this.facadeUser = ''
+//                this.syncSysTitle = ''
+            }
+        }
+    }
+</script>
+
